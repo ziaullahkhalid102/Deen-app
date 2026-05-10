@@ -49,6 +49,8 @@ import com.deenapp.ui.theme.DeenGreenPrimary
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.Scope
+import com.google.api.services.drive.DriveScopes
 
 @Composable
 fun WelcomeScreen(
@@ -195,8 +197,10 @@ fun WelcomeScreen(
                     isSigningIn = true
                     try {
                         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                            .requestIdToken("68945776746-4jk3f3vt98kkqg5he8km6ioi8ki3114s.apps.googleusercontent.com")
                             .requestEmail()
                             .requestProfile()
+                            .requestScopes(Scope(DriveScopes.DRIVE_FILE), Scope(DriveScopes.DRIVE_APPDATA))
                             .build()
                         val googleSignInClient = GoogleSignIn.getClient(context, gso)
                         googleSignInLauncher.launch(googleSignInClient.signInIntent)
