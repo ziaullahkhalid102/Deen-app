@@ -25,6 +25,7 @@ import com.deenapp.ui.screens.home.HomeScreen
 import com.deenapp.ui.screens.notifications.NotificationsScreen
 import com.deenapp.ui.screens.onboarding.ProfileSetupScreen
 import com.deenapp.ui.screens.profile.ProfileScreen
+import com.deenapp.ui.screens.profile.UserProfileScreen
 import com.deenapp.ui.screens.search.SearchScreen
 import com.deenapp.ui.screens.settings.SettingsScreen
 import com.deenapp.ui.screens.shorts.ShortsScreen
@@ -46,6 +47,9 @@ sealed class Screen(val route: String) {
     data object Settings : Screen("settings")
     data object ChatDetail : Screen("chat_detail/{contactName}") {
         fun createRoute(contactName: String) = "chat_detail/${android.net.Uri.encode(contactName)}"
+    }
+    data object UserProfile : Screen("user_profile/{userName}") {
+        fun createRoute(userName: String) = "user_profile/${android.net.Uri.encode(userName)}"
     }
 }
 
@@ -167,6 +171,9 @@ fun DeenNavigation(
                     },
                     onNavigateToSearch = {
                         navController.navigate(Screen.Search.route)
+                    },
+                    onNavigateToUserProfile = { userName ->
+                        navController.navigate(Screen.UserProfile.createRoute(userName))
                     }
                 )
             }
@@ -208,8 +215,11 @@ fun DeenNavigation(
                 enterTransition = { slideInHorizontally(initialOffsetX = { it }) },
                 exitTransition = { slideOutHorizontally(targetOffsetX = { it }) }
             ) {
+                val currentUser by homeViewModel.currentUser.collectAsState()
                 CreatePostScreen(
                     onClose = { navController.popBackStack() },
+                    userName = currentUser.displayName,
+                    userPhotoUrl = currentUser.profileImageUrl,
                     onPost = { content, mediaUris ->
                         homeViewModel.addPost(
                             content = content,
@@ -252,6 +262,22 @@ fun DeenNavigation(
                             popUpTo(0) { inclusive = true }
                         }
                     }
+                )
+            }
+
+            composable(
+                Screen.UserProfile.route,
+                enterTransition = { slideInHorizontally(initialOffsetX = { it }) },
+                exitTransition = { slideOutHorizontally(targetOffsetX = { it }) }
+            ) { backStackEntry ->
+                val userName = backStackEntry.arguments?.getString("userName") ?: ""
+                UserProfileScreen(
+                    userName = userName,
+                    onBack = { navController.popBackStack() },
+                    onChatClick = { name ->
+                        navController.navigate(Screen.ChatDetail.createRoute(name))
+                    },
+                    onFollowToggle = { }
                 )
             }
         }

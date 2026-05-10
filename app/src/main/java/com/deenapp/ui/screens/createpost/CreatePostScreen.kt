@@ -79,7 +79,9 @@ import com.deenapp.ui.theme.DeenGreenPrimary
 @Composable
 fun CreatePostScreen(
     onClose: () -> Unit = {},
-    onPost: (String, List<Uri>) -> Unit = { _, _ -> }
+    onPost: (String, List<Uri>) -> Unit = { _, _ -> },
+    userName: String = "",
+    userPhotoUrl: String = ""
 ) {
     var postContent by remember { mutableStateOf("") }
     var selectedType by remember { mutableIntStateOf(0) }
@@ -150,11 +152,11 @@ fun CreatePostScreen(
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ProfileAvatar(imageUrl = null, size = 48.dp)
+                ProfileAvatar(imageUrl = userPhotoUrl.ifEmpty { null }, size = 48.dp)
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = "Muhammad Usman",
+                        text = userName.ifEmpty { "You" },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
