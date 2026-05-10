@@ -3,6 +3,7 @@ package com.deenapp.ui.screens.createpost
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,19 +17,27 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EmojiEmotions
+import androidx.compose.material.icons.filled.GifBox
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Mood
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.VideoCall
+import androidx.compose.material.icons.filled.Tag
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -36,13 +45,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -64,28 +73,30 @@ fun CreatePostScreen(
     onClose: () -> Unit = {}
 ) {
     var postContent by remember { mutableStateOf("") }
+    var selectedType by remember { mutableIntStateOf(0) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Create Post", fontWeight = FontWeight.SemiBold) },
+                title = { Text("Create Post", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onClose) {
                         Icon(Icons.Default.Close, contentDescription = "Close")
                     }
                 },
                 actions = {
-                    TextButton(
-                        onClick = { },
-                        enabled = postContent.isNotEmpty()
+                    Button(
+                        onClick = onClose,
+                        enabled = postContent.isNotEmpty(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = DeenGreenPrimary,
+                            disabledContainerColor = DeenGreenPrimary.copy(alpha = 0.3f)
+                        ),
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier.padding(end = 8.dp),
+                        contentPadding = PaddingValues(horizontal = 20.dp)
                     ) {
-                        Text(
-                            text = "Post",
-                            color = if (postContent.isNotEmpty()) DeenGreenPrimary
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
-                        )
+                        Text("Post", fontWeight = FontWeight.Bold)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -98,27 +109,31 @@ fun CreatePostScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(rememberScrollState())
         ) {
+            // User info + visibility
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ProfileAvatar(imageUrl = null, size = 42.dp)
-                Spacer(modifier = Modifier.width(10.dp))
+                ProfileAvatar(imageUrl = null, size = 48.dp)
+                Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
                         text = "Muhammad Usman",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                            .clickable { }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             Icons.Default.Public,
@@ -132,10 +147,47 @@ fun CreatePostScreen(
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Icon(
+                            Icons.Default.ArrowDropDown,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
 
+            // Post type selector
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val types = listOf("Text", "Photo", "Video", "Reel")
+                types.forEachIndexed { index, type ->
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(
+                                if (selectedType == index) DeenGreenPrimary
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            .clickable { selectedType = index }
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = type,
+                            color = if (selectedType == index) Color.White
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+
+            // Post content
             TextField(
                 value = postContent,
                 onValueChange = { postContent = it },
@@ -148,93 +200,131 @@ fun CreatePostScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
+                    .height(200.dp),
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent
-                )
+                ),
+                textStyle = MaterialTheme.typography.bodyLarge
             )
 
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(vertical = 8.dp)
-            ) {
-                items(4) { index ->
-                    Box(
-                        modifier = Modifier
-                            .size(80.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        DeenGreenPrimary.copy(alpha = 0.2f + index * 0.1f),
-                                        DeenGreenPrimary.copy(alpha = 0.4f + index * 0.1f)
+            // Media preview grid
+            if (selectedType > 0) {
+                Text(
+                    text = "Add Media",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    repeat(3) {
+                        Box(
+                            modifier = Modifier
+                                .size(100.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(
+                                            DeenGreenPrimary.copy(alpha = 0.15f),
+                                            DeenGreenPrimary.copy(alpha = 0.3f)
+                                        )
                                     )
                                 )
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CameraAlt,
-                            contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.6f),
-                            modifier = Modifier.size(24.dp)
-                        )
+                                .clickable { },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = when (selectedType) {
+                                    2 -> Icons.Default.Videocam
+                                    3 -> Icons.Default.PlayCircle
+                                    else -> Icons.Default.Image
+                                },
+                                contentDescription = null,
+                                tint = DeenGreenPrimary.copy(alpha = 0.5f),
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
                     }
-                }
-
-                item {
+                    // Add more button
                     Box(
                         modifier = Modifier
-                            .size(80.dp)
+                            .size(100.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .border(
+                                2.dp,
+                                MaterialTheme.colorScheme.outlineVariant,
+                                RoundedCornerShape(12.dp)
+                            )
                             .clickable { },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Add Photo",
-                            tint = DeenGreenPrimary,
-                            modifier = Modifier.size(32.dp)
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = "Add",
+                                tint = DeenGreenPrimary,
+                                modifier = Modifier.size(28.dp)
+                            )
+                            Text(
+                                "Add",
+                                fontSize = 11.sp,
+                                color = DeenGreenPrimary
+                            )
+                        }
                     }
                 }
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider(
                 thickness = 0.5.dp,
                 color = MaterialTheme.colorScheme.outlineVariant
             )
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                CreatePostOption(
+            // Action row - Facebook style
+            Column {
+                CreatePostAction(
                     icon = Icons.Default.Image,
-                    label = "Photo",
-                    color = DeenGreenPrimary
+                    label = "Photo/Video",
+                    color = Color(0xFF4CAF50)
                 )
-                CreatePostOption(
-                    icon = Icons.Default.VideoCall,
-                    label = "Video",
-                    color = Color(0xFFE53935)
+                CreatePostAction(
+                    icon = Icons.Default.PersonAdd,
+                    label = "Tag People",
+                    color = Color(0xFF2196F3)
                 )
-                CreatePostOption(
-                    icon = Icons.Default.EmojiEmotions,
-                    label = "Feeling",
-                    color = Color(0xFFFFA000)
+                CreatePostAction(
+                    icon = Icons.Default.Mood,
+                    label = "Feeling/Activity",
+                    color = Color(0xFFFFC107)
                 )
-                CreatePostOption(
+                CreatePostAction(
                     icon = Icons.Default.LocationOn,
-                    label = "Location",
+                    label = "Check In",
                     color = Color(0xFFE53935)
+                )
+                CreatePostAction(
+                    icon = Icons.Default.CameraAlt,
+                    label = "Camera",
+                    color = Color(0xFF9C27B0)
+                )
+                CreatePostAction(
+                    icon = Icons.Default.GifBox,
+                    label = "GIF",
+                    color = Color(0xFF00BCD4)
+                )
+                CreatePostAction(
+                    icon = Icons.Default.Tag,
+                    label = "Hashtags",
+                    color = Color(0xFFFF5722)
                 )
             }
         }
@@ -242,26 +332,29 @@ fun CreatePostScreen(
 }
 
 @Composable
-fun CreatePostOption(
+fun CreatePostAction(
     icon: ImageVector,
     label: String,
     color: Color
 ) {
     Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.clickable { }
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { }
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = icon,
             contentDescription = label,
             tint = color,
-            modifier = Modifier.size(22.dp)
+            modifier = Modifier.size(24.dp)
         )
-        Spacer(modifier = Modifier.width(4.dp))
+        Spacer(modifier = Modifier.width(16.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium
         )
     }
 }

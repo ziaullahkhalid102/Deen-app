@@ -28,17 +28,26 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PlayCircleOutline
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
@@ -47,6 +56,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -82,14 +94,19 @@ fun ProfileScreen(
 
         ProfileInfo(user = user)
 
-        ProfileActions()
+        ProfileActions(onNavigateToSettings = onNavigateToSettings)
 
         ProfileTabBar(
             selectedTab = selectedTab,
             onTabSelected = { viewModel.selectTab(it) }
         )
 
-        ProfilePostGrid(posts = posts)
+        when (selectedTab) {
+            0 -> ProfilePostGrid(posts = posts, label = "My Posts")
+            1 -> ProfilePostGrid(posts = posts.take(3), label = "Videos/Reels")
+            2 -> ProfilePostGrid(posts = posts.take(2), label = "Saved")
+            3 -> ProfilePostGrid(posts = posts.take(1), label = "Private")
+        }
 
         Spacer(modifier = Modifier.height(80.dp))
     }
@@ -97,11 +114,14 @@ fun ProfileScreen(
 
 @Composable
 fun ProfileHeader(user: User, onSettingsClick: () -> Unit = {}) {
+    var showMenu by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(250.dp)
+            .height(260.dp)
     ) {
+        // Banner
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -109,8 +129,8 @@ fun ProfileHeader(user: User, onSettingsClick: () -> Unit = {}) {
                 .background(
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            DeenGreenPrimary.copy(alpha = 0.6f),
-                            DeenGreenPrimary.copy(alpha = 0.3f)
+                            DeenGreenPrimary,
+                            DeenGreenPrimary.copy(alpha = 0.7f)
                         )
                     )
                 )
@@ -122,22 +142,74 @@ fun ProfileHeader(user: User, onSettingsClick: () -> Unit = {}) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 IconButton(onClick = { }) {
-                    Icon(
-                        Icons.Default.ArrowBack,
-                        contentDescription = "Back",
-                        tint = Color.White
-                    )
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                 }
-                IconButton(onClick = onSettingsClick) {
-                    Icon(
-                        Icons.Default.Settings,
-                        contentDescription = "Settings",
-                        tint = Color.White
-                    )
+                Row {
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.White)
+                    }
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Edit Profile") },
+                                onClick = { showMenu = false },
+                                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Share Profile") },
+                                onClick = { showMenu = false },
+                                leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Copy Profile Link") },
+                                onClick = { showMenu = false },
+                                leadingIcon = { Icon(Icons.Default.Link, contentDescription = null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Privacy Settings") },
+                                onClick = { showMenu = false },
+                                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Settings") },
+                                onClick = {
+                                    showMenu = false
+                                    onSettingsClick()
+                                },
+                                leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) }
+                            )
+                        }
+                    }
                 }
+            }
+
+            // Edit banner icon
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 12.dp, bottom = 12.dp)
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .clickable { },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.CameraAlt,
+                    contentDescription = "Edit Banner",
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
 
+        // Profile avatar
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -149,6 +221,23 @@ fun ProfileHeader(user: User, onSettingsClick: () -> Unit = {}) {
                 borderColor = MaterialTheme.colorScheme.surface,
                 borderWidth = 4.dp
             )
+            // Camera icon on avatar
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(DeenGreenPrimary)
+                    .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.CameraAlt,
+                    contentDescription = "Change Photo",
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
         }
     }
 }
@@ -170,7 +259,7 @@ fun ProfileInfo(user: User) {
         Text(
             text = user.username,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = DeenGreenPrimary
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -187,7 +276,19 @@ fun ProfileInfo(user: User) {
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             ProfileStat(value = formatProfileCount(user.postsCount), label = "Posts")
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(32.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant)
+            )
             ProfileStat(value = formatProfileCount(user.followersCount), label = "Followers")
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(32.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant)
+            )
             ProfileStat(value = formatProfileCount(user.followingCount), label = "Following")
         }
     }
@@ -195,12 +296,16 @@ fun ProfileInfo(user: User) {
 
 @Composable
 fun ProfileStat(value: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable { }
+    ) {
         Text(
             text = value,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            fontSize = 18.sp
+            fontSize = 20.sp,
+            color = DeenGreenPrimary
         )
         Text(
             text = label,
@@ -211,7 +316,7 @@ fun ProfileStat(value: String, label: String) {
 }
 
 @Composable
-fun ProfileActions() {
+fun ProfileActions(onNavigateToSettings: () -> Unit = {}) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -221,12 +326,26 @@ fun ProfileActions() {
         Button(
             onClick = { },
             modifier = Modifier.weight(1f),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = DeenGreenPrimary
-            ),
+            colors = ButtonDefaults.buttonColors(containerColor = DeenGreenPrimary),
             shape = RoundedCornerShape(8.dp)
         ) {
+            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(6.dp))
             Text("Edit Profile", fontWeight = FontWeight.SemiBold)
+        }
+        OutlinedButton(
+            onClick = { },
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Icon(
+                Icons.Default.Share,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = DeenGreenPrimary
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text("Share", fontWeight = FontWeight.SemiBold, color = DeenGreenPrimary)
         }
         IconButton(
             onClick = { },
@@ -234,11 +353,7 @@ fun ProfileActions() {
                 .size(40.dp)
                 .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
         ) {
-            Icon(
-                Icons.Default.Refresh,
-                contentDescription = "Refresh",
-                modifier = Modifier.size(20.dp)
-            )
+            Icon(Icons.Default.PersonAdd, contentDescription = "Find Friends", modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -247,8 +362,9 @@ fun ProfileActions() {
 fun ProfileTabBar(selectedTab: Int, onTabSelected: (Int) -> Unit) {
     val tabs = listOf(
         Icons.Default.GridView to "Posts",
-        Icons.Default.PlayCircleOutline to "Reels",
-        Icons.Default.BookmarkBorder to "Saved"
+        Icons.Default.PlayCircleOutline to "Videos",
+        Icons.Default.BookmarkBorder to "Saved",
+        Icons.Default.Lock to "Private"
     )
 
     TabRow(
@@ -273,6 +389,17 @@ fun ProfileTabBar(selectedTab: Int, onTabSelected: (Int) -> Unit) {
                         imageVector = icon,
                         contentDescription = label,
                         tint = if (selectedTab == index) DeenGreenPrimary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp)
+                    )
+                },
+                text = {
+                    Text(
+                        text = label,
+                        fontSize = 11.sp,
+                        fontWeight = if (selectedTab == index) FontWeight.SemiBold
+                        else FontWeight.Normal,
+                        color = if (selectedTab == index) DeenGreenPrimary
                         else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -282,8 +409,32 @@ fun ProfileTabBar(selectedTab: Int, onTabSelected: (Int) -> Unit) {
 }
 
 @Composable
-fun ProfilePostGrid(posts: List<Post>) {
-    val gridHeight = ((posts.size + 2) / 3) * 130
+fun ProfilePostGrid(posts: List<Post>, label: String = "") {
+    if (posts.isEmpty()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                Icons.Default.CameraAlt,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "No $label yet",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        return
+    }
+
+    val gridHeight = ((posts.size + 2) / 3) * 135
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         modifier = Modifier
@@ -298,23 +449,35 @@ fun ProfilePostGrid(posts: List<Post>) {
             Box(
                 modifier = Modifier
                     .aspectRatio(1f)
+                    .clip(RoundedCornerShape(4.dp))
                     .background(
                         brush = Brush.verticalGradient(
                             colors = listOf(
                                 DeenGreenPrimary.copy(alpha = 0.2f),
-                                DeenGreenPrimary.copy(alpha = 0.4f)
+                                DeenGreenPrimary.copy(alpha = 0.5f)
                             )
                         )
                     )
                     .clickable { },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.CameraAlt,
-                    contentDescription = null,
-                    tint = Color.White.copy(alpha = 0.5f),
-                    modifier = Modifier.size(32.dp)
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = if (post.videoUrl.isNotEmpty()) Icons.Default.PlayCircleOutline
+                        else Icons.Default.CameraAlt,
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.7f),
+                        modifier = Modifier.size(32.dp)
+                    )
+                    if (post.likesCount > 0) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "${post.likesCount} ❤",
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontSize = 10.sp
+                        )
+                    }
+                }
             }
         }
     }
