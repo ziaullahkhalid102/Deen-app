@@ -24,7 +24,7 @@ class DeenRepository @Inject constructor() {
     val followedUsers: StateFlow<Set<String>> = _followedUsers.asStateFlow()
 
     fun updateCurrentUser(userId: String, email: String, name: String, photoUrl: String) {
-        _currentUser.value = _currentUser.value.copy(
+        _currentUser.value = User(
             id = userId,
             email = email,
             displayName = name,
