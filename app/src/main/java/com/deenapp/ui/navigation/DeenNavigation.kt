@@ -18,6 +18,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.deenapp.ui.components.DeenBottomNavBar
 import com.deenapp.ui.screens.auth.WelcomeScreen
+import com.deenapp.ui.screens.chat.ChatDetailScreen
 import com.deenapp.ui.screens.chat.ChatScreen
 import com.deenapp.ui.screens.createpost.CreatePostScreen
 import com.deenapp.ui.screens.home.HomeScreen
@@ -42,6 +43,9 @@ sealed class Screen(val route: String) {
     data object Notifications : Screen("notifications")
     data object Search : Screen("search")
     data object Settings : Screen("settings")
+    data object ChatDetail : Screen("chat_detail/{contactName}") {
+        fun createRoute(contactName: String) = "chat_detail/$contactName"
+    }
 }
 
 @Composable
@@ -157,7 +161,23 @@ fun DeenNavigation(
             }
 
             composable(Screen.Chat.route) {
-                ChatScreen()
+                ChatScreen(
+                    onChatClick = { contactName ->
+                        navController.navigate(Screen.ChatDetail.createRoute(contactName))
+                    }
+                )
+            }
+
+            composable(
+                Screen.ChatDetail.route,
+                enterTransition = { slideInHorizontally(initialOffsetX = { it }) },
+                exitTransition = { slideOutHorizontally(targetOffsetX = { it }) }
+            ) { backStackEntry ->
+                val contactName = backStackEntry.arguments?.getString("contactName") ?: "Chat"
+                ChatDetailScreen(
+                    contactName = contactName,
+                    onBack = { navController.popBackStack() }
+                )
             }
 
             composable(Screen.Profile.route) {

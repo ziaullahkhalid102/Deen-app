@@ -70,6 +70,7 @@ import com.deenapp.viewmodel.ChatViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
+    onChatClick: (String) -> Unit = {},
     viewModel: ChatViewModel = hiltViewModel()
 ) {
     val conversations by viewModel.conversations.collectAsState()
@@ -237,7 +238,14 @@ fun ChatScreen(
             }
 
             items(filteredConversations) { conversation ->
-                ChatConversationItem(conversation = conversation)
+                ChatConversationItem(
+                    conversation = conversation,
+                    onClick = {
+                        val name = if (conversation.isGroup) conversation.groupName
+                            else conversation.participantName
+                        onChatClick(name)
+                    }
+                )
                 HorizontalDivider(
                     thickness = 0.5.dp,
                     color = MaterialTheme.colorScheme.outlineVariant,
@@ -288,11 +296,14 @@ fun OnlineContactsRow() {
 }
 
 @Composable
-fun ChatConversationItem(conversation: ChatConversation) {
+fun ChatConversationItem(
+    conversation: ChatConversation,
+    onClick: () -> Unit = {}
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { }
+            .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

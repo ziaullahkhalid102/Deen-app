@@ -49,9 +49,12 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -85,9 +88,12 @@ fun ChatDetailScreen(
     var messageText by remember { mutableStateOf("") }
     var showAttachMenu by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    var messageIdCounter by remember { mutableStateOf(13) }
 
     val messages = remember {
-        listOf(
+        mutableStateListOf(
             ChatBubbleData("1", "Assalamu Alaikum!", false, "10:25 AM"),
             ChatBubbleData("2", "Wa Alaikum Assalam! How are you?", true, "10:26 AM"),
             ChatBubbleData("3", "Alhamdulillah, I'm doing well. How about you?", false, "10:27 AM"),
@@ -101,6 +107,26 @@ fun ChatDetailScreen(
             ChatBubbleData("11", "📎 Hadith_Collection.pdf", false, "10:34 AM", isFile = true, fileName = "Hadith_Collection.pdf"),
             ChatBubbleData("12", "JazakAllah! I'll read it tonight InshaAllah", true, "10:35 AM", isRead = true)
         )
+    }
+
+    fun sendMessage() {
+        if (messageText.isNotBlank()) {
+            messages.add(
+                ChatBubbleData(
+                    id = messageIdCounter.toString(),
+                    message = messageText.trim(),
+                    isMe = true,
+                    time = java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault())
+                        .format(java.util.Date()),
+                    isRead = false
+                )
+            )
+            messageIdCounter++
+            messageText = ""
+            coroutineScope.launch {
+                listState.animateScrollToItem(messages.size - 1)
+            }
+        }
     }
 
     Scaffold(
@@ -206,7 +232,7 @@ fun ChatDetailScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
-                state = rememberLazyListState(),
+                state = listState,
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 reverseLayout = false
@@ -279,7 +305,7 @@ fun ChatDetailScreen(
                         .size(44.dp)
                         .clip(CircleShape)
                         .background(DeenGreenPrimary)
-                        .clickable { },
+                        .clickable { sendMessage() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(

@@ -45,6 +45,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -69,6 +71,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.deenapp.data.model.Post
 import com.deenapp.data.model.Story
+import com.deenapp.ui.components.CommentSection
 import com.deenapp.ui.components.ProfileAvatar
 import com.deenapp.ui.theme.DeenGreenPrimary
 import com.deenapp.ui.theme.DeenLikeRed
@@ -304,12 +307,15 @@ fun PostOptionButton(
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun PostCard(
     post: Post,
     onLikeClick: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var isBookmarked by remember { mutableStateOf(post.isBookmarked) }
+    var isFollowing by remember { mutableStateOf(false) }
+    var showComments by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier
@@ -344,11 +350,11 @@ fun PostCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Follow",
-                            color = DeenGreenPrimary,
+                            text = if (isFollowing) "Following" else "Follow",
+                            color = if (isFollowing) MaterialTheme.colorScheme.onSurfaceVariant else DeenGreenPrimary,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.clickable { }
+                            modifier = Modifier.clickable { isFollowing = !isFollowing }
                         )
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -514,7 +520,7 @@ fun PostCard(
                     icon = Icons.Default.ChatBubbleOutline,
                     label = "Comment",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    onClick = { }
+                    onClick = { showComments = true }
                 )
                 PostActionButton(
                     icon = Icons.Default.Share,
@@ -529,6 +535,18 @@ fun PostCard(
                     onClick = { isBookmarked = !isBookmarked }
                 )
             }
+        }
+    }
+
+    if (showComments) {
+        ModalBottomSheet(
+            onDismissRequest = { showComments = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ) {
+            CommentSection(
+                comments = emptyList(),
+                modifier = Modifier.height(400.dp)
+            )
         }
     }
 }
