@@ -44,7 +44,7 @@ sealed class Screen(val route: String) {
     data object Search : Screen("search")
     data object Settings : Screen("settings")
     data object ChatDetail : Screen("chat_detail/{contactName}") {
-        fun createRoute(contactName: String) = "chat_detail/$contactName"
+        fun createRoute(contactName: String) = "chat_detail/${android.net.Uri.encode(contactName)}"
     }
 }
 
