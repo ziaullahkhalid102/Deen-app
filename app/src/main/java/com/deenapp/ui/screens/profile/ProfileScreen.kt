@@ -27,6 +27,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Lock
@@ -48,9 +50,16 @@ import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,6 +72,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.deenapp.data.model.Post
+import com.deenapp.data.model.PostVisibility
 import com.deenapp.data.model.User
 import com.deenapp.ui.components.ProfileAvatar
 import com.deenapp.ui.theme.DeenGreenPrimary
@@ -94,10 +104,25 @@ fun ProfileScreen(
         )
 
         when (selectedTab) {
-            0 -> ProfilePostGrid(posts = posts, label = "My Posts")
-            1 -> ProfilePostGrid(posts = posts.take(3), label = "Videos/Reels")
-            2 -> ProfilePostGrid(posts = posts.take(2), label = "Saved")
-            3 -> ProfilePostGrid(posts = posts.take(1), label = "Private")
+            0 -> ProfilePostList(
+                posts = posts,
+                label = "My Posts",
+                onDeletePost = { viewModel.deletePost(it) },
+                onToggleVisibility = { viewModel.togglePostVisibility(it) }
+            )
+            1 -> ProfilePostGrid(posts = posts.filter { it.videoUrl.isNotEmpty() }, label = "Videos/Reels")
+            2 -> ProfilePostList(
+                posts = posts.filter { it.isBookmarked },
+                label = "Saved",
+                onDeletePost = { viewModel.deletePost(it) },
+                onToggleVisibility = { viewModel.togglePostVisibility(it) }
+            )
+            3 -> ProfilePostList(
+                posts = posts.filter { it.visibility == PostVisibility.PRIVATE },
+                label = "Private",
+                onDeletePost = { viewModel.deletePost(it) },
+                onToggleVisibility = { viewModel.togglePostVisibility(it) }
+            )
         }
 
         Spacer(modifier = Modifier.height(80.dp))
@@ -353,6 +378,255 @@ fun ProfileTabBar(selectedTab: Int, onTabSelected: (Int) -> Unit) {
             )
         }
     }
+}
+
+@Composable
+fun ProfilePostList(
+    posts: List<Post>,
+    label: String = "",
+    onDeletePost: (String) -> Unit = {},
+    onToggleVisibility: (String) -> Unit = {}
+) {
+    if (posts.isEmpty()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                Icons.Default.CameraAlt,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "No $label yet",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        return
+    }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        posts.forEach { post ->
+            ProfilePostCard(
+                post = post,
+                onDeletePost = { onDeletePost(post.id) },
+                onToggleVisibility = { onToggleVisibility(post.id) }
+            )
+        }
+    }
+}
+
+@Composable
+fun ProfilePostCard(
+    post: Post,
+    onDeletePost: () -> Unit = {},
+    onToggleVisibility: () -> Unit = {}
+) {
+    var showMenu by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .background(MaterialTheme.colorScheme.surface)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ProfileAvatar(imageUrl = post.userProfileImage, size = 40.dp)
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = post.userName,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = post.timeAgo,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        if (post.visibility == PostVisibility.PRIVATE) Icons.Default.Lock
+                        else Icons.Default.Public,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Box {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(
+                        Icons.Default.MoreVert,
+                        contentDescription = "Options",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                if (post.visibility == PostVisibility.PRIVATE) "Make Public"
+                                else "Make Private"
+                            )
+                        },
+                        onClick = {
+                            onToggleVisibility()
+                            showMenu = false
+                        },
+                        leadingIcon = {
+                            Icon(
+                                if (post.visibility == PostVisibility.PRIVATE) Icons.Default.Public
+                                else Icons.Default.Lock,
+                                contentDescription = null
+                            )
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Delete Post") },
+                        onClick = {
+                            onDeletePost()
+                            showMenu = false
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = Color(0xFFE53935)
+                            )
+                        }
+                    )
+                }
+            }
+        }
+
+        if (post.content.isNotEmpty()) {
+            Text(
+                text = post.content,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                lineHeight = 22.sp
+            )
+        }
+
+        if (post.imageUrl.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 10f)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                DeenGreenPrimary.copy(alpha = 0.3f),
+                                DeenGreenPrimary.copy(alpha = 0.6f)
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CameraAlt,
+                    contentDescription = null,
+                    tint = Color.White.copy(alpha = 0.5f),
+                    modifier = Modifier.size(48.dp)
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "${post.likesCount} likes",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "${post.commentsCount} comments · ${post.sharesCount} shares",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        HorizontalDivider(
+            modifier = Modifier.padding(horizontal = 12.dp),
+            thickness = 0.5.dp,
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            Row(
+                modifier = Modifier
+                    .clickable { }
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.FavoriteBorder,
+                    contentDescription = "Like",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Like", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Row(
+                modifier = Modifier
+                    .clickable { }
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.ChatBubbleOutline,
+                    contentDescription = "Comment",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Comment", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Row(
+                modifier = Modifier
+                    .clickable { }
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.Share,
+                    contentDescription = "Share",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Share", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+    Spacer(modifier = Modifier.height(8.dp))
 }
 
 @Composable

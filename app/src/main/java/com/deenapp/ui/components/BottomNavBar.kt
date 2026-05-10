@@ -63,11 +63,11 @@ fun DeenBottomNavBar(
             tonalElevation = 0.dp,
             modifier = Modifier
                 .shadow(
-                    elevation = 12.dp,
-                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+                    elevation = 8.dp,
+                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
                 )
-                .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-                .height(68.dp)
+                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                .height(72.dp)
         ) {
             bottomNavItems.forEach { item ->
                 if (item.route == "create") {
@@ -77,7 +77,7 @@ fun DeenBottomNavBar(
                         icon = {
                             Box(
                                 modifier = Modifier
-                                    .size(46.dp)
+                                    .size(44.dp)
                                     .background(
                                         brush = Brush.verticalGradient(
                                             colors = listOf(
@@ -94,7 +94,7 @@ fun DeenBottomNavBar(
                                     imageVector = Icons.Filled.Add,
                                     contentDescription = "Create",
                                     tint = Color.White,
-                                    modifier = Modifier.size(26.dp)
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
                         },
@@ -112,14 +112,15 @@ fun DeenBottomNavBar(
                             Icon(
                                 imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
                                 contentDescription = item.label,
-                                modifier = Modifier.size(if (isSelected) 26.dp else 24.dp)
+                                modifier = Modifier.size(24.dp)
                             )
                         },
                         label = {
                             Text(
                                 text = item.label,
-                                fontSize = 10.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                maxLines = 1
                             )
                         },
                         colors = NavigationBarItemDefaults.colors(
@@ -127,7 +128,7 @@ fun DeenBottomNavBar(
                             selectedTextColor = DeenGreenPrimary,
                             unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            indicatorColor = DeenGreenPrimary.copy(alpha = 0.08f)
+                            indicatorColor = DeenGreenPrimary.copy(alpha = 0.1f)
                         )
                     )
                 }

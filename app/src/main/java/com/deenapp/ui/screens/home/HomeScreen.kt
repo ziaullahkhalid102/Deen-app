@@ -82,10 +82,12 @@ import com.deenapp.viewmodel.HomeViewModel
 fun HomeScreen(
     onNavigateToNotifications: () -> Unit = {},
     onNavigateToSearch: () -> Unit = {},
+    onNavigateToUserProfile: (String) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val stories by viewModel.stories.collectAsState()
     val posts by viewModel.posts.collectAsState()
+    val currentUser by viewModel.currentUser.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
@@ -134,13 +136,15 @@ fun HomeScreen(
             }
 
             item {
-                CreatePostBar()
+                CreatePostBar(userPhotoUrl = currentUser.profileImageUrl.ifEmpty { null })
             }
 
             items(posts) { post ->
                 PostCard(
                     post = post,
-                    onLikeClick = { viewModel.toggleLike(post.id) }
+                    onLikeClick = { viewModel.toggleLike(post.id) },
+                    onBookmarkClick = { viewModel.toggleBookmark(post.id) },
+                    onUserClick = { onNavigateToUserProfile(post.userName) }
                 )
             }
         }
@@ -212,7 +216,7 @@ fun StoryItem(story: Story) {
 }
 
 @Composable
-fun CreatePostBar() {
+fun CreatePostBar(userPhotoUrl: String? = null) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -228,7 +232,7 @@ fun CreatePostBar() {
                     .padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ProfileAvatar(imageUrl = null, size = 40.dp)
+                ProfileAvatar(imageUrl = userPhotoUrl, size = 40.dp)
                 Spacer(modifier = Modifier.width(10.dp))
                 Box(
                     modifier = Modifier
@@ -310,10 +314,12 @@ fun PostOptionButton(
 @OptIn(ExperimentalMaterial3Api::class)
 fun PostCard(
     post: Post,
-    onLikeClick: () -> Unit
+    onLikeClick: () -> Unit,
+    onBookmarkClick: () -> Unit = {},
+    onUserClick: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    var isBookmarked by remember { mutableStateOf(post.isBookmarked) }
+    var isBookmarked by remember(post.isBookmarked) { mutableStateOf(post.isBookmarked) }
     var isFollowing by remember { mutableStateOf(false) }
     var showComments by remember { mutableStateOf(false) }
 
@@ -333,14 +339,19 @@ fun PostCard(
                     .padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ProfileAvatar(imageUrl = post.userProfileImage, size = 44.dp)
+                ProfileAvatar(
+                    imageUrl = post.userProfileImage,
+                    size = 44.dp,
+                    modifier = Modifier.clickable { onUserClick() }
+                )
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = post.userName,
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.clickable { onUserClick() }
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
@@ -384,8 +395,9 @@ fun PostCard(
                         onDismissRequest = { showMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Save Post") },
+                            text = { Text(if (isBookmarked) "Unsave Post" else "Save Post") },
                             onClick = {
+                                onBookmarkClick()
                                 isBookmarked = !isBookmarked
                                 showMenu = false
                             },
@@ -532,7 +544,7 @@ fun PostCard(
                     icon = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                     label = "Save",
                     color = if (isBookmarked) DeenGreenPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    onClick = { isBookmarked = !isBookmarked }
+                    onClick = { onBookmarkClick() }
                 )
             }
         }
