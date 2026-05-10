@@ -1,24 +1,18 @@
 package com.deenapp.data.service
 
 import android.content.Context
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
+import com.google.api.client.http.ByteArrayContent
+import com.google.api.client.http.javanet.NetHttpTransport
+import com.google.api.client.json.gson.GsonFactory
+import com.google.api.services.drive.Drive
+import com.google.api.services.drive.DriveScopes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Google Drive integration service for backing up and syncing user data.
- *
- * Data stored in Google Drive:
- * - User profile (name, bio, settings)
- * - Posts and media references
- * - Chat history
- * - App preferences
- *
- * Uses the Google Drive REST API via the user's Google account.
- * All data is stored in the app-specific folder on Google Drive,
- * which is only accessible by this app.
- */
 @Singleton
 class GoogleDriveService @Inject constructor() {
 
@@ -30,126 +24,194 @@ class GoogleDriveService @Inject constructor() {
         private const val SETTINGS_FILE = "settings.json"
     }
 
-    /**
-     * Initialize Google Drive connection with the user's Google account.
-     * Called after successful Google Sign-In.
-     */
+    private var driveService: Drive? = null
+    private var appFolderId: String? = null
+
     suspend fun initialize(context: Context, accountEmail: String): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                // In production: Use GoogleSignIn.getLastSignedInAccount()
-                // and DriveResourceClient to access Google Drive
-                true
+                val account = GoogleSignIn.getLastSignedInAccount(context)
+                if (account != null) {
+                    val credential = GoogleAccountCredential.usingOAuth2(
+                        context, listOf(DriveScopes.DRIVE_FILE, DriveScopes.DRIVE_APPDATA)
+                    )
+                    credential.selectedAccount = account.account
+                    driveService = Drive.Builder(
+                        NetHttpTransport(),
+                        GsonFactory.getDefaultInstance(),
+                        credential
+                    ).setApplicationName("Deen App").build()
+
+                    appFolderId = getOrCreateFolder(APP_FOLDER)
+                    true
+                } else {
+                    false
+                }
             } catch (e: Exception) {
                 false
             }
         }
     }
 
-    /**
-     * Backup user profile data to Google Drive.
-     */
+    private fun getOrCreateFolder(folderName: String): String? {
+        val service = driveService ?: return null
+        val result = service.files().list()
+            .setQ("name='$folderName' and mimeType='application/vnd.google-apps.folder' and trashed=false")
+            .setSpaces("drive")
+            .setFields("files(id)")
+            .execute()
+
+        if (result.files.isNotEmpty()) {
+            return result.files[0].id
+        }
+
+        val folderMetadata = com.google.api.services.drive.model.File().apply {
+            name = folderName
+            mimeType = "application/vnd.google-apps.folder"
+        }
+        val folder = service.files().create(folderMetadata)
+            .setFields("id")
+            .execute()
+        return folder.id
+    }
+
+    private fun uploadOrUpdateFile(fileName: String, content: String, mimeType: String = "application/json"): Boolean {
+        val service = driveService ?: return false
+        val folderId = appFolderId ?: return false
+
+        val existingFiles = service.files().list()
+            .setQ("name='$fileName' and '$folderId' in parents and trashed=false")
+            .setFields("files(id)")
+            .execute()
+
+        val mediaContent = ByteArrayContent(mimeType, content.toByteArray())
+
+        if (existingFiles.files.isNotEmpty()) {
+            service.files().update(existingFiles.files[0].id, null, mediaContent).execute()
+        } else {
+            val fileMetadata = com.google.api.services.drive.model.File().apply {
+                name = fileName
+                parents = listOf(folderId)
+            }
+            service.files().create(fileMetadata, mediaContent)
+                .setFields("id")
+                .execute()
+        }
+        return true
+    }
+
+    private fun readFile(fileName: String): String? {
+        val service = driveService ?: return null
+        val folderId = appFolderId ?: return null
+
+        val result = service.files().list()
+            .setQ("name='$fileName' and '$folderId' in parents and trashed=false")
+            .setFields("files(id)")
+            .execute()
+
+        if (result.files.isEmpty()) return null
+
+        val outputStream = java.io.ByteArrayOutputStream()
+        service.files().get(result.files[0].id).executeMediaAndDownloadTo(outputStream)
+        return outputStream.toString("UTF-8")
+    }
+
     suspend fun backupProfile(profileJson: String): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                // Write profileJson to Google Drive appDataFolder
-                // Path: DeenApp/profile.json
-                true
+                uploadOrUpdateFile(PROFILE_FILE, profileJson)
             } catch (e: Exception) {
                 false
             }
         }
     }
 
-    /**
-     * Restore user profile from Google Drive.
-     */
     suspend fun restoreProfile(): String? {
         return withContext(Dispatchers.IO) {
             try {
-                // Read profile.json from Google Drive appDataFolder
-                null
+                readFile(PROFILE_FILE)
             } catch (e: Exception) {
                 null
             }
         }
     }
 
-    /**
-     * Backup posts data to Google Drive.
-     */
     suspend fun backupPosts(postsJson: String): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                true
+                uploadOrUpdateFile(POSTS_FILE, postsJson)
             } catch (e: Exception) {
                 false
             }
         }
     }
 
-    /**
-     * Backup chat history to Google Drive.
-     */
     suspend fun backupChats(chatsJson: String): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                true
+                uploadOrUpdateFile(CHATS_FILE, chatsJson)
             } catch (e: Exception) {
                 false
             }
         }
     }
 
-    /**
-     * Backup app settings to Google Drive.
-     */
     suspend fun backupSettings(settingsJson: String): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                true
+                uploadOrUpdateFile(SETTINGS_FILE, settingsJson)
             } catch (e: Exception) {
                 false
             }
         }
     }
 
-    /**
-     * Upload media file (image/video) to Google Drive.
-     */
     suspend fun uploadMedia(fileName: String, fileBytes: ByteArray): String? {
         return withContext(Dispatchers.IO) {
             try {
-                // Upload to Google Drive and return the file ID
-                "drive_file_id_${System.currentTimeMillis()}"
+                val service = driveService ?: return@withContext null
+                val folderId = appFolderId ?: return@withContext null
+
+                val mimeType = when {
+                    fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") -> "image/jpeg"
+                    fileName.endsWith(".png") -> "image/png"
+                    fileName.endsWith(".mp4") -> "video/mp4"
+                    fileName.endsWith(".webm") -> "video/webm"
+                    else -> "application/octet-stream"
+                }
+
+                val fileMetadata = com.google.api.services.drive.model.File().apply {
+                    name = fileName
+                    parents = listOf(folderId)
+                }
+                val mediaContent = ByteArrayContent(mimeType, fileBytes)
+                val file = service.files().create(fileMetadata, mediaContent)
+                    .setFields("id, webContentLink")
+                    .execute()
+                file.id
             } catch (e: Exception) {
                 null
             }
         }
     }
 
-    /**
-     * Sync all app data with Google Drive.
-     * Called periodically or on user request.
-     */
     suspend fun syncAll(): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                // Sync profile, posts, chats, and settings
-                true
+                driveService != null && appFolderId != null
             } catch (e: Exception) {
                 false
             }
         }
     }
 
-    /**
-     * Delete all app data from Google Drive.
-     * Called when user deletes their account.
-     */
     suspend fun deleteAllData(): Boolean {
         return withContext(Dispatchers.IO) {
             try {
+                val service = driveService ?: return@withContext false
+                val folderId = appFolderId ?: return@withContext false
+                service.files().delete(folderId).execute()
+                appFolderId = null
                 true
             } catch (e: Exception) {
                 false

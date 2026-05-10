@@ -18,6 +18,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.deenapp.ui.components.DeenBottomNavBar
 import com.deenapp.ui.screens.auth.WelcomeScreen
+import com.deenapp.ui.screens.chat.ChatDetailScreen
 import com.deenapp.ui.screens.chat.ChatScreen
 import com.deenapp.ui.screens.createpost.CreatePostScreen
 import com.deenapp.ui.screens.home.HomeScreen
@@ -29,6 +30,7 @@ import com.deenapp.ui.screens.settings.SettingsScreen
 import com.deenapp.ui.screens.shorts.ShortsScreen
 import com.deenapp.ui.screens.splash.SplashScreen
 import com.deenapp.viewmodel.AuthViewModel
+import com.deenapp.viewmodel.HomeViewModel
 
 sealed class Screen(val route: String) {
     data object Splash : Screen("splash")
@@ -42,6 +44,9 @@ sealed class Screen(val route: String) {
     data object Notifications : Screen("notifications")
     data object Search : Screen("search")
     data object Settings : Screen("settings")
+    data object ChatDetail : Screen("chat_detail/{contactName}") {
+        fun createRoute(contactName: String) = "chat_detail/${android.net.Uri.encode(contactName)}"
+    }
 }
 
 @Composable
@@ -52,6 +57,7 @@ fun DeenNavigation(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: "splash"
     val authState by authViewModel.authState.collectAsState()
+    val homeViewModel: HomeViewModel = hiltViewModel()
 
     val showBottomBar = currentRoute in listOf("home", "shorts", "chat", "profile")
 
@@ -111,6 +117,18 @@ fun DeenNavigation(
                             popUpTo(Screen.Welcome.route) { inclusive = true }
                         }
                     },
+                    onGoogleSignInWithToken = { idToken ->
+                        authViewModel.signInWithGoogle(idToken)
+                        navController.navigate(Screen.ProfileSetup.route) {
+                            popUpTo(Screen.Welcome.route) { inclusive = true }
+                        }
+                    },
+                    onGoogleAccountSignIn = { id, email, name, photoUrl ->
+                        authViewModel.signInWithGoogleAccount(id, email, name, photoUrl)
+                        navController.navigate(Screen.ProfileSetup.route) {
+                            popUpTo(Screen.Welcome.route) { inclusive = true }
+                        }
+                    },
                     onSkipLogin = {
                         authViewModel.skipLogin()
                         navController.navigate(Screen.Home.route) {
@@ -143,6 +161,7 @@ fun DeenNavigation(
 
             composable(Screen.Home.route) {
                 HomeScreen(
+                    viewModel = homeViewModel,
                     onNavigateToNotifications = {
                         navController.navigate(Screen.Notifications.route)
                     },
@@ -157,7 +176,23 @@ fun DeenNavigation(
             }
 
             composable(Screen.Chat.route) {
-                ChatScreen()
+                ChatScreen(
+                    onChatClick = { contactName ->
+                        navController.navigate(Screen.ChatDetail.createRoute(contactName))
+                    }
+                )
+            }
+
+            composable(
+                Screen.ChatDetail.route,
+                enterTransition = { slideInHorizontally(initialOffsetX = { it }) },
+                exitTransition = { slideOutHorizontally(targetOffsetX = { it }) }
+            ) { backStackEntry ->
+                val contactName = backStackEntry.arguments?.getString("contactName") ?: "Chat"
+                ChatDetailScreen(
+                    contactName = contactName,
+                    onBack = { navController.popBackStack() }
+                )
             }
 
             composable(Screen.Profile.route) {
@@ -174,7 +209,13 @@ fun DeenNavigation(
                 exitTransition = { slideOutHorizontally(targetOffsetX = { it }) }
             ) {
                 CreatePostScreen(
-                    onClose = { navController.popBackStack() }
+                    onClose = { navController.popBackStack() },
+                    onPost = { content, mediaUris ->
+                        homeViewModel.addPost(
+                            content = content,
+                            mediaUris = mediaUris.map { it.toString() }
+                        )
+                    }
                 )
             }
 

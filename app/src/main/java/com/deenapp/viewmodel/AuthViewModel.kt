@@ -3,11 +3,14 @@ package com.deenapp.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.deenapp.data.repository.DeenRepository
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 data class AuthState(
@@ -29,16 +32,41 @@ class AuthViewModel @Inject constructor(
     private val _authState = MutableStateFlow(AuthState())
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
+    private val firebaseAuth: FirebaseAuth = FirebaseAuth.getInstance()
+
+    init {
+        checkCurrentUser()
+    }
+
+    private fun checkCurrentUser() {
+        val currentUser = firebaseAuth.currentUser
+        if (currentUser != null) {
+            _authState.value = AuthState(
+                isLoggedIn = true,
+                isProfileSetupComplete = true,
+                userId = currentUser.uid,
+                userEmail = currentUser.email ?: "",
+                userName = currentUser.displayName ?: "",
+                userPhotoUrl = currentUser.photoUrl?.toString() ?: ""
+            )
+        }
+    }
+
     fun signInWithGoogle(idToken: String) {
         viewModelScope.launch {
             _authState.value = _authState.value.copy(isLoading = true, error = null)
             try {
-                // Firebase Google Sign-In integration
-                // In production, this would use FirebaseAuth.signInWithCredential()
+                val credential = GoogleAuthProvider.getCredential(idToken, null)
+                val result = firebaseAuth.signInWithCredential(credential).await()
+                val user = result.user
                 _authState.value = _authState.value.copy(
                     isLoggedIn = true,
                     isLoading = false,
-                    userId = "google_user_${System.currentTimeMillis()}",
+                    userId = user?.uid ?: "",
+                    userEmail = user?.email ?: "",
+                    userName = user?.displayName ?: "",
+                    userPhotoUrl = user?.photoUrl?.toString() ?: "",
+                    isProfileSetupComplete = false,
                     error = null
                 )
             } catch (e: Exception) {
@@ -48,6 +76,18 @@ class AuthViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    fun signInWithGoogleAccount(id: String, email: String, name: String, photoUrl: String) {
+        _authState.value = AuthState(
+            isLoggedIn = true,
+            isLoading = false,
+            userId = id,
+            userEmail = email,
+            userName = name,
+            userPhotoUrl = photoUrl,
+            isProfileSetupComplete = false
+        )
     }
 
     fun skipLogin() {
@@ -64,6 +104,7 @@ class AuthViewModel @Inject constructor(
     }
 
     fun signOut() {
+        firebaseAuth.signOut()
         _authState.value = AuthState()
     }
 
