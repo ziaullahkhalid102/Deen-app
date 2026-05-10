@@ -9,6 +9,7 @@ import com.deenapp.data.model.User
 import com.deenapp.data.repository.DeenRepository
 import com.deenapp.data.service.AiPostAgent
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,6 +34,10 @@ class HomeViewModel @Inject constructor(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
+    private var storiesJob: Job? = null
+    private var postsJob: Job? = null
+    private var userJob: Job? = null
+
     init {
         loadData()
         generateAiContent()
@@ -45,13 +50,16 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun loadData() {
-        viewModelScope.launch {
+        storiesJob?.cancel()
+        postsJob?.cancel()
+        userJob?.cancel()
+        storiesJob = viewModelScope.launch {
             repository.getStories().collect { _stories.value = it }
         }
-        viewModelScope.launch {
+        postsJob = viewModelScope.launch {
             repository.getPosts().collect { _posts.value = it }
         }
-        viewModelScope.launch {
+        userJob = viewModelScope.launch {
             repository.getCurrentUser().collect { _currentUser.value = it }
         }
     }
@@ -78,6 +86,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _isRefreshing.value = true
             loadData()
+            kotlinx.coroutines.delay(300)
             _isRefreshing.value = false
         }
     }

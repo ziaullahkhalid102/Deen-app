@@ -146,6 +146,12 @@ class AuthViewModel @Inject constructor(
                 isProfileSetupComplete = false,
                 error = null
             )
+            repository.updateCurrentUser(
+                userId = "google_user_001",
+                email = "user@gmail.com",
+                name = "Muhammad Usman",
+                photoUrl = ""
+            )
         }
     }
 }
