@@ -78,6 +78,18 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+    fun signInWithGoogleAccount(id: String, email: String, name: String, photoUrl: String) {
+        _authState.value = AuthState(
+            isLoggedIn = true,
+            isLoading = false,
+            userId = id,
+            userEmail = email,
+            userName = name,
+            userPhotoUrl = photoUrl,
+            isProfileSetupComplete = false
+        )
+    }
+
     fun skipLogin() {
         _authState.value = _authState.value.copy(
             isLoggedIn = true,

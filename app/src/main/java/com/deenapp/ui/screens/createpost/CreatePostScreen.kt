@@ -78,7 +78,8 @@ import com.deenapp.ui.theme.DeenGreenPrimary
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreatePostScreen(
-    onClose: () -> Unit = {}
+    onClose: () -> Unit = {},
+    onPost: (String, List<Uri>) -> Unit = { _, _ -> }
 ) {
     var postContent by remember { mutableStateOf("") }
     var selectedType by remember { mutableIntStateOf(0) }
@@ -114,6 +115,7 @@ fun CreatePostScreen(
                 actions = {
                     Button(
                         onClick = {
+                            onPost(postContent, selectedMedia.toList())
                             Toast.makeText(context, "Post shared successfully!", Toast.LENGTH_SHORT).show()
                             onClose()
                         },

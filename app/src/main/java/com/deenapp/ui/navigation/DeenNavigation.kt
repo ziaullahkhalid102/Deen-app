@@ -30,6 +30,7 @@ import com.deenapp.ui.screens.settings.SettingsScreen
 import com.deenapp.ui.screens.shorts.ShortsScreen
 import com.deenapp.ui.screens.splash.SplashScreen
 import com.deenapp.viewmodel.AuthViewModel
+import com.deenapp.viewmodel.HomeViewModel
 
 sealed class Screen(val route: String) {
     data object Splash : Screen("splash")
@@ -56,6 +57,7 @@ fun DeenNavigation(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: "splash"
     val authState by authViewModel.authState.collectAsState()
+    val homeViewModel: HomeViewModel = hiltViewModel()
 
     val showBottomBar = currentRoute in listOf("home", "shorts", "chat", "profile")
 
@@ -121,6 +123,12 @@ fun DeenNavigation(
                             popUpTo(Screen.Welcome.route) { inclusive = true }
                         }
                     },
+                    onGoogleAccountSignIn = { id, email, name, photoUrl ->
+                        authViewModel.signInWithGoogleAccount(id, email, name, photoUrl)
+                        navController.navigate(Screen.ProfileSetup.route) {
+                            popUpTo(Screen.Welcome.route) { inclusive = true }
+                        }
+                    },
                     onSkipLogin = {
                         authViewModel.skipLogin()
                         navController.navigate(Screen.Home.route) {
@@ -153,6 +161,7 @@ fun DeenNavigation(
 
             composable(Screen.Home.route) {
                 HomeScreen(
+                    viewModel = homeViewModel,
                     onNavigateToNotifications = {
                         navController.navigate(Screen.Notifications.route)
                     },
@@ -200,7 +209,13 @@ fun DeenNavigation(
                 exitTransition = { slideOutHorizontally(targetOffsetX = { it }) }
             ) {
                 CreatePostScreen(
-                    onClose = { navController.popBackStack() }
+                    onClose = { navController.popBackStack() },
+                    onPost = { content, mediaUris ->
+                        homeViewModel.addPost(
+                            content = content,
+                            mediaUris = mediaUris.map { it.toString() }
+                        )
+                    }
                 )
             }
 

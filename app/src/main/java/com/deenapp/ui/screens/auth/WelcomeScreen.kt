@@ -54,6 +54,7 @@ import com.google.android.gms.common.api.ApiException
 fun WelcomeScreen(
     onGoogleSignIn: () -> Unit,
     onGoogleSignInWithToken: (String) -> Unit = {},
+    onGoogleAccountSignIn: (String, String, String, String) -> Unit = { _, _, _, _ -> },
     onSkipLogin: () -> Unit
 ) {
     var visible by remember { mutableStateOf(false) }
@@ -79,6 +80,13 @@ fun WelcomeScreen(
                 val idToken = account?.idToken
                 if (idToken != null) {
                     onGoogleSignInWithToken(idToken)
+                } else if (account != null) {
+                    onGoogleAccountSignIn(
+                        account.id ?: "",
+                        account.email ?: "",
+                        account.displayName ?: "",
+                        account.photoUrl?.toString() ?: ""
+                    )
                 } else {
                     onGoogleSignIn()
                 }
@@ -187,7 +195,6 @@ fun WelcomeScreen(
                     isSigningIn = true
                     try {
                         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                            .requestIdToken("YOUR_WEB_CLIENT_ID")
                             .requestEmail()
                             .requestProfile()
                             .build()

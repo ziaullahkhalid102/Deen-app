@@ -53,6 +53,23 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun addPost(content: String, mediaUris: List<String> = emptyList()) {
+        val newPost = Post(
+            id = "post_${System.currentTimeMillis()}",
+            userId = "current_user",
+            userName = "You",
+            content = content,
+            imageUrl = mediaUris.firstOrNull() ?: "",
+            likesCount = 0,
+            commentsCount = 0,
+            sharesCount = 0,
+            isLiked = false,
+            isBookmarked = false,
+            timeAgo = "Just now"
+        )
+        _posts.value = listOf(newPost) + _posts.value
+    }
+
     fun refresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
