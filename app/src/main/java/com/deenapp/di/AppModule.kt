@@ -1,6 +1,7 @@
 package com.deenapp.di
 
 import com.deenapp.data.repository.DeenRepository
+import com.deenapp.data.service.GoogleDriveService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -15,5 +16,11 @@ object AppModule {
     @Singleton
     fun provideDeenRepository(): DeenRepository {
         return DeenRepository()
+    }
+
+    @Provides
+    @Singleton
+    fun provideGoogleDriveService(): GoogleDriveService {
+        return GoogleDriveService()
     }
 }

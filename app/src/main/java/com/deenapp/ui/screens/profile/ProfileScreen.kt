@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -65,6 +66,7 @@ import com.deenapp.viewmodel.ProfileViewModel
 
 @Composable
 fun ProfileScreen(
+    onNavigateToSettings: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val user by viewModel.user.collectAsState()
@@ -76,7 +78,7 @@ fun ProfileScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
-        ProfileHeader(user = user)
+        ProfileHeader(user = user, onSettingsClick = onNavigateToSettings)
 
         ProfileInfo(user = user)
 
@@ -94,7 +96,7 @@ fun ProfileScreen(
 }
 
 @Composable
-fun ProfileHeader(user: User) {
+fun ProfileHeader(user: User, onSettingsClick: () -> Unit = {}) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -126,7 +128,7 @@ fun ProfileHeader(user: User) {
                         tint = Color.White
                     )
                 }
-                IconButton(onClick = { }) {
+                IconButton(onClick = onSettingsClick) {
                     Icon(
                         Icons.Default.Settings,
                         contentDescription = "Settings",

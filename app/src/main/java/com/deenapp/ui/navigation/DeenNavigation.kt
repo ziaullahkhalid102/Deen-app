@@ -1,32 +1,39 @@
 package com.deenapp.ui.navigation
 
-import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavHostController
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.deenapp.ui.components.DeenBottomNavBar
+import com.deenapp.ui.screens.auth.WelcomeScreen
 import com.deenapp.ui.screens.chat.ChatScreen
 import com.deenapp.ui.screens.createpost.CreatePostScreen
 import com.deenapp.ui.screens.home.HomeScreen
 import com.deenapp.ui.screens.notifications.NotificationsScreen
+import com.deenapp.ui.screens.onboarding.ProfileSetupScreen
 import com.deenapp.ui.screens.profile.ProfileScreen
 import com.deenapp.ui.screens.search.SearchScreen
+import com.deenapp.ui.screens.settings.SettingsScreen
 import com.deenapp.ui.screens.shorts.ShortsScreen
+import com.deenapp.ui.screens.splash.SplashScreen
+import com.deenapp.viewmodel.AuthViewModel
 
 sealed class Screen(val route: String) {
+    data object Splash : Screen("splash")
+    data object Welcome : Screen("welcome")
+    data object ProfileSetup : Screen("profile_setup")
     data object Home : Screen("home")
     data object Shorts : Screen("shorts")
     data object Create : Screen("create")
@@ -34,13 +41,17 @@ sealed class Screen(val route: String) {
     data object Profile : Screen("profile")
     data object Notifications : Screen("notifications")
     data object Search : Screen("search")
+    data object Settings : Screen("settings")
 }
 
 @Composable
-fun DeenNavigation() {
+fun DeenNavigation(
+    authViewModel: AuthViewModel = hiltViewModel()
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route ?: "home"
+    val currentRoute = navBackStackEntry?.destination?.route ?: "splash"
+    val authState by authViewModel.authState.collectAsState()
 
     val showBottomBar = currentRoute in listOf("home", "shorts", "chat", "profile")
 
@@ -68,15 +79,75 @@ fun DeenNavigation() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Screen.Home.route,
+            startDestination = Screen.Splash.route,
             modifier = Modifier.padding(innerPadding),
             enterTransition = { fadeIn(animationSpec = tween(300)) },
             exitTransition = { fadeOut(animationSpec = tween(300)) }
         ) {
+            composable(Screen.Splash.route) {
+                SplashScreen(
+                    onSplashComplete = {
+                        val destination = if (authState.isLoggedIn) {
+                            if (authState.isProfileSetupComplete) Screen.Home.route
+                            else Screen.ProfileSetup.route
+                        } else {
+                            Screen.Welcome.route
+                        }
+                        navController.navigate(destination) {
+                            popUpTo(Screen.Splash.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            composable(
+                Screen.Welcome.route,
+                enterTransition = { fadeIn(animationSpec = tween(500)) }
+            ) {
+                WelcomeScreen(
+                    onGoogleSignIn = {
+                        authViewModel.simulateGoogleSignIn()
+                        navController.navigate(Screen.ProfileSetup.route) {
+                            popUpTo(Screen.Welcome.route) { inclusive = true }
+                        }
+                    },
+                    onSkipLogin = {
+                        authViewModel.skipLogin()
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Welcome.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            composable(
+                Screen.ProfileSetup.route,
+                enterTransition = { slideInHorizontally(initialOffsetX = { it }) },
+                exitTransition = { slideOutHorizontally(targetOffsetX = { -it }) }
+            ) {
+                ProfileSetupScreen(
+                    onComplete = {
+                        authViewModel.completeProfileSetup()
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.ProfileSetup.route) { inclusive = true }
+                        }
+                    },
+                    onSkip = {
+                        authViewModel.completeProfileSetup()
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.ProfileSetup.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
             composable(Screen.Home.route) {
                 HomeScreen(
                     onNavigateToNotifications = {
                         navController.navigate(Screen.Notifications.route)
+                    },
+                    onNavigateToSearch = {
+                        navController.navigate(Screen.Search.route)
                     }
                 )
             }
@@ -90,24 +161,56 @@ fun DeenNavigation() {
             }
 
             composable(Screen.Profile.route) {
-                ProfileScreen()
+                ProfileScreen(
+                    onNavigateToSettings = {
+                        navController.navigate(Screen.Settings.route)
+                    }
+                )
             }
 
-            composable(Screen.Create.route) {
+            composable(
+                Screen.Create.route,
+                enterTransition = { slideInHorizontally(initialOffsetX = { it }) },
+                exitTransition = { slideOutHorizontally(targetOffsetX = { it }) }
+            ) {
                 CreatePostScreen(
                     onClose = { navController.popBackStack() }
                 )
             }
 
-            composable(Screen.Notifications.route) {
+            composable(
+                Screen.Notifications.route,
+                enterTransition = { slideInHorizontally(initialOffsetX = { it }) },
+                exitTransition = { slideOutHorizontally(targetOffsetX = { it }) }
+            ) {
                 NotificationsScreen(
                     onBack = { navController.popBackStack() }
                 )
             }
 
-            composable(Screen.Search.route) {
+            composable(
+                Screen.Search.route,
+                enterTransition = { slideInHorizontally(initialOffsetX = { it }) },
+                exitTransition = { slideOutHorizontally(targetOffsetX = { it }) }
+            ) {
                 SearchScreen(
                     onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                Screen.Settings.route,
+                enterTransition = { slideInHorizontally(initialOffsetX = { it }) },
+                exitTransition = { slideOutHorizontally(targetOffsetX = { it }) }
+            ) {
+                SettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onSignOut = {
+                        authViewModel.signOut()
+                        navController.navigate(Screen.Welcome.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
                 )
             }
         }

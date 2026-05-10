@@ -67,6 +67,7 @@ import com.deenapp.viewmodel.HomeViewModel
 @Composable
 fun HomeScreen(
     onNavigateToNotifications: () -> Unit = {},
+    onNavigateToSearch: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val stories by viewModel.stories.collectAsState()
