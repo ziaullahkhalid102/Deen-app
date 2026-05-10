@@ -49,6 +49,12 @@ class AuthViewModel @Inject constructor(
                 userName = currentUser.displayName ?: "",
                 userPhotoUrl = currentUser.photoUrl?.toString() ?: ""
             )
+            repository.updateCurrentUser(
+                userId = currentUser.uid,
+                email = currentUser.email ?: "",
+                name = currentUser.displayName ?: "",
+                photoUrl = currentUser.photoUrl?.toString() ?: ""
+            )
         }
     }
 
@@ -69,6 +75,12 @@ class AuthViewModel @Inject constructor(
                     isProfileSetupComplete = false,
                     error = null
                 )
+                repository.updateCurrentUser(
+                    userId = user?.uid ?: "",
+                    email = user?.email ?: "",
+                    name = user?.displayName ?: "",
+                    photoUrl = user?.photoUrl?.toString() ?: ""
+                )
             } catch (e: Exception) {
                 _authState.value = _authState.value.copy(
                     isLoading = false,
@@ -88,6 +100,12 @@ class AuthViewModel @Inject constructor(
             userPhotoUrl = photoUrl,
             isProfileSetupComplete = false
         )
+        repository.updateCurrentUser(
+            userId = id,
+            email = email,
+            name = name,
+            photoUrl = photoUrl
+        )
     }
 
     fun skipLogin() {
@@ -96,6 +114,12 @@ class AuthViewModel @Inject constructor(
             isProfileSetupComplete = true,
             userId = "guest_user",
             userName = "Guest"
+        )
+        repository.updateCurrentUser(
+            userId = "guest_user",
+            email = "",
+            name = "Guest",
+            photoUrl = ""
         )
     }
 

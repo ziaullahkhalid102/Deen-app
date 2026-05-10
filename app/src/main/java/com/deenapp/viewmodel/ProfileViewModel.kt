@@ -35,11 +35,23 @@ class ProfileViewModel @Inject constructor(
             repository.getCurrentUser().collect { _user.value = it }
         }
         viewModelScope.launch {
-            repository.getPosts().collect { _posts.value = it }
+            repository.getUserPosts().collect { _posts.value = it }
         }
     }
 
     fun selectTab(index: Int) {
         _selectedTab.value = index
+    }
+
+    fun deletePost(postId: String) {
+        repository.deletePost(postId)
+    }
+
+    fun togglePostVisibility(postId: String) {
+        repository.togglePostVisibility(postId)
+    }
+
+    fun toggleBookmark(postId: String) {
+        repository.toggleBookmark(postId)
     }
 }
