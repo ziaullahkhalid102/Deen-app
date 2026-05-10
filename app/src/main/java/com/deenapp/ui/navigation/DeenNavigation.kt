@@ -115,6 +115,12 @@ fun DeenNavigation(
                             popUpTo(Screen.Welcome.route) { inclusive = true }
                         }
                     },
+                    onGoogleSignInWithToken = { idToken ->
+                        authViewModel.signInWithGoogle(idToken)
+                        navController.navigate(Screen.ProfileSetup.route) {
+                            popUpTo(Screen.Welcome.route) { inclusive = true }
+                        }
+                    },
                     onSkipLogin = {
                         authViewModel.skipLogin()
                         navController.navigate(Screen.Home.route) {

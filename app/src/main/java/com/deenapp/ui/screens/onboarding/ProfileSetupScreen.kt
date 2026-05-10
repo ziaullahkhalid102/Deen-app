@@ -1,5 +1,8 @@
 package com.deenapp.ui.screens.onboarding
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
@@ -50,9 +53,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip as clipModifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.deenapp.ui.theme.DeenGreenPrimary
 import com.deenapp.ui.theme.DeenGold
 
@@ -71,6 +79,13 @@ fun ProfileSetupScreen(
     var selectedCountry by remember { mutableStateOf("") }
     var selectedCity by remember { mutableStateOf("") }
     var countryExpanded by remember { mutableStateOf(false) }
+    var profileImageUri by remember { mutableStateOf<Uri?>(null) }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let { profileImageUri = it }
+    }
 
     val totalSteps = 3
     val progress = (currentStep + 1).toFloat() / totalSteps
@@ -134,22 +149,36 @@ fun ProfileSetupScreen(
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                         .border(3.dp, DeenGreenPrimary, CircleShape)
-                        .clickable { },
+                        .clickable { imagePickerLauncher.launch("image/*") },
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Default.CameraAlt,
-                            contentDescription = "Add Photo",
-                            tint = DeenGreenPrimary,
-                            modifier = Modifier.size(32.dp)
+                    if (profileImageUri != null) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(profileImageUri)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Profile Photo",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(120.dp)
+                                .clip(CircleShape)
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Add Photo",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = DeenGreenPrimary
-                        )
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.CameraAlt,
+                                contentDescription = "Add Photo",
+                                tint = DeenGreenPrimary,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Add Photo",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = DeenGreenPrimary
+                            )
+                        }
                     }
                 }
 

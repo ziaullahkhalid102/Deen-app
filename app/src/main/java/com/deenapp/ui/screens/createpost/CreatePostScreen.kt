@@ -1,5 +1,9 @@
 package com.deenapp.ui.screens.createpost
 
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -61,9 +65,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.deenapp.ui.components.ProfileAvatar
 import com.deenapp.ui.theme.DeenGreenPrimary
 
@@ -74,6 +82,25 @@ fun CreatePostScreen(
 ) {
     var postContent by remember { mutableStateOf("") }
     var selectedType by remember { mutableIntStateOf(0) }
+    val selectedMedia = remember { mutableListOf<Uri>() }
+    var mediaRefresh by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris ->
+        selectedMedia.addAll(uris)
+        mediaRefresh++
+    }
+
+    val videoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            selectedMedia.add(it)
+            mediaRefresh++
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -86,8 +113,11 @@ fun CreatePostScreen(
                 },
                 actions = {
                     Button(
-                        onClick = onClose,
-                        enabled = postContent.isNotEmpty(),
+                        onClick = {
+                            Toast.makeText(context, "Post shared successfully!", Toast.LENGTH_SHORT).show()
+                            onClose()
+                        },
+                        enabled = postContent.isNotEmpty() || selectedMedia.isNotEmpty(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = DeenGreenPrimary,
                             disabledContainerColor = DeenGreenPrimary.copy(alpha = 0.3f)
@@ -211,9 +241,11 @@ fun CreatePostScreen(
             )
 
             // Media preview grid
-            if (selectedType > 0) {
+            @Suppress("UNUSED_EXPRESSION")
+            mediaRefresh
+            if (selectedMedia.isNotEmpty() || selectedType > 0) {
                 Text(
-                    text = "Add Media",
+                    text = "Media (${selectedMedia.size} selected)",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -225,32 +257,41 @@ fun CreatePostScreen(
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    repeat(3) {
+                    selectedMedia.forEachIndexed { index, uri ->
                         Box(
                             modifier = Modifier
                                 .size(100.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(
-                                            DeenGreenPrimary.copy(alpha = 0.15f),
-                                            DeenGreenPrimary.copy(alpha = 0.3f)
-                                        )
-                                    )
-                                )
-                                .clickable { },
-                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = when (selectedType) {
-                                    2 -> Icons.Default.Videocam
-                                    3 -> Icons.Default.PlayCircle
-                                    else -> Icons.Default.Image
-                                },
-                                contentDescription = null,
-                                tint = DeenGreenPrimary.copy(alpha = 0.5f),
-                                modifier = Modifier.size(32.dp)
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(uri)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = "Selected media",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
                             )
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(4.dp)
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.6f))
+                                    .clickable {
+                                        selectedMedia.removeAt(index)
+                                        mediaRefresh++
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Remove",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
                     }
                     // Add more button
@@ -263,7 +304,12 @@ fun CreatePostScreen(
                                 MaterialTheme.colorScheme.outlineVariant,
                                 RoundedCornerShape(12.dp)
                             )
-                            .clickable { },
+                            .clickable {
+                                when (selectedType) {
+                                    2, 3 -> videoPickerLauncher.launch("video/*")
+                                    else -> imagePickerLauncher.launch("image/*")
+                                }
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -294,37 +340,38 @@ fun CreatePostScreen(
                 CreatePostAction(
                     icon = Icons.Default.Image,
                     label = "Photo/Video",
-                    color = Color(0xFF4CAF50)
+                    color = Color(0xFF4CAF50),
+                    onClick = { imagePickerLauncher.launch("image/*") }
+                )
+                CreatePostAction(
+                    icon = Icons.Default.Videocam,
+                    label = "Video",
+                    color = Color(0xFF2196F3),
+                    onClick = { videoPickerLauncher.launch("video/*") }
                 )
                 CreatePostAction(
                     icon = Icons.Default.PersonAdd,
                     label = "Tag People",
-                    color = Color(0xFF2196F3)
+                    color = Color(0xFF9C27B0),
+                    onClick = { Toast.makeText(context, "Tag People coming soon", Toast.LENGTH_SHORT).show() }
                 )
                 CreatePostAction(
                     icon = Icons.Default.Mood,
                     label = "Feeling/Activity",
-                    color = Color(0xFFFFC107)
+                    color = Color(0xFFFFC107),
+                    onClick = { Toast.makeText(context, "Feeling/Activity coming soon", Toast.LENGTH_SHORT).show() }
                 )
                 CreatePostAction(
                     icon = Icons.Default.LocationOn,
                     label = "Check In",
-                    color = Color(0xFFE53935)
-                )
-                CreatePostAction(
-                    icon = Icons.Default.CameraAlt,
-                    label = "Camera",
-                    color = Color(0xFF9C27B0)
-                )
-                CreatePostAction(
-                    icon = Icons.Default.GifBox,
-                    label = "GIF",
-                    color = Color(0xFF00BCD4)
+                    color = Color(0xFFE53935),
+                    onClick = { Toast.makeText(context, "Check In coming soon", Toast.LENGTH_SHORT).show() }
                 )
                 CreatePostAction(
                     icon = Icons.Default.Tag,
                     label = "Hashtags",
-                    color = Color(0xFFFF5722)
+                    color = Color(0xFFFF5722),
+                    onClick = { Toast.makeText(context, "Hashtags coming soon", Toast.LENGTH_SHORT).show() }
                 )
             }
         }
@@ -335,12 +382,13 @@ fun CreatePostScreen(
 fun CreatePostAction(
     icon: ImageVector,
     label: String,
-    color: Color
+    color: Color,
+    onClick: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { }
+            .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

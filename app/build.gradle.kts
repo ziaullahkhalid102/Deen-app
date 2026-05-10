@@ -100,6 +100,7 @@ dependencies {
     implementation("com.google.api-client:google-api-client-android:2.7.0")
     implementation("com.google.apis:google-api-services-drive:v3-rev20241206-2.0.0")
     implementation("com.google.http-client:google-http-client-gson:1.45.1")
+    implementation("com.google.android.gms:play-services-drive:17.0.0")
 
     // DataStore for local preferences
     implementation("androidx.datastore:datastore-preferences:1.1.1")

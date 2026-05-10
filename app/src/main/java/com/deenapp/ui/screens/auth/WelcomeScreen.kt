@@ -1,8 +1,11 @@
 package com.deenapp.ui.screens.auth
 
+import android.app.Activity
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,8 +23,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mosque
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -42,13 +46,19 @@ import androidx.compose.ui.unit.sp
 import com.deenapp.ui.theme.DeenGold
 import com.deenapp.ui.theme.DeenGreenDark
 import com.deenapp.ui.theme.DeenGreenPrimary
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 
 @Composable
 fun WelcomeScreen(
     onGoogleSignIn: () -> Unit,
+    onGoogleSignInWithToken: (String) -> Unit = {},
     onSkipLogin: () -> Unit
 ) {
     var visible by remember { mutableStateOf(false) }
+    var isSigningIn by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) { visible = true }
 
@@ -57,6 +67,27 @@ fun WelcomeScreen(
         animationSpec = tween(1000),
         label = "contentAlpha"
     )
+
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        isSigningIn = false
+        if (result.resultCode == Activity.RESULT_OK) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            try {
+                val account = task.getResult(ApiException::class.java)
+                val idToken = account?.idToken
+                if (idToken != null) {
+                    onGoogleSignInWithToken(idToken)
+                } else {
+                    onGoogleSignIn()
+                }
+            } catch (e: ApiException) {
+                Log.e("WelcomeScreen", "Google sign-in failed: ${e.statusCode}", e)
+                onGoogleSignIn()
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -125,7 +156,6 @@ fun WelcomeScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Features list
             val features = listOf(
                 "Share Islamic Content",
                 "Watch Short Videos",
@@ -153,28 +183,58 @@ fun WelcomeScreen(
             Spacer(modifier = Modifier.weight(0.5f))
 
             Button(
-                onClick = onGoogleSignIn,
+                onClick = {
+                    isSigningIn = true
+                    try {
+                        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                            .requestIdToken("YOUR_WEB_CLIENT_ID")
+                            .requestEmail()
+                            .requestProfile()
+                            .build()
+                        val googleSignInClient = GoogleSignIn.getClient(context, gso)
+                        googleSignInLauncher.launch(googleSignInClient.signInIntent)
+                    } catch (e: Exception) {
+                        isSigningIn = false
+                        onGoogleSignIn()
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.White
                 ),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                enabled = !isSigningIn
             ) {
-                Text(
-                    text = "G",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF4285F4)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = "Continue with Google",
-                    color = Color.DarkGray,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+                if (isSigningIn) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = DeenGreenPrimary,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Signing in...",
+                        color = Color.DarkGray,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                } else {
+                    Text(
+                        text = "G",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF4285F4)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Continue with Google",
+                        color = Color.DarkGray,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
