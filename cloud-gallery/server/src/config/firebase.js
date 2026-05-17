@@ -6,8 +6,14 @@ let db;
 function initializeFirebase() {
   try {
     const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+    const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
-    if (serviceAccountPath) {
+    if (serviceAccountJson) {
+      const serviceAccount = JSON.parse(serviceAccountJson);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+    } else if (serviceAccountPath) {
       const serviceAccount = require(path.resolve(serviceAccountPath));
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),

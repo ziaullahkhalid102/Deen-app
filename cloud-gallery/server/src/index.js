@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const { initializeFirebase } = require('./config/firebase');
@@ -31,6 +32,14 @@ app.use('/api/external', require('./routes/external'));
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Serve frontend static files in production
+const clientDistPath = path.join(__dirname, '../../client/dist');
+app.use(express.static(clientDistPath));
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  res.sendFile(path.join(clientDistPath, 'index.html'));
 });
 
 // Error handling middleware
